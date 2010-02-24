@@ -1,0 +1,4 @@
+name = Cookie skip access permission
+description = [fickleskipaccessperm] Control access to based on a cookie 
+dependencies[] = ficklefieldaccess
+package = Fickle 

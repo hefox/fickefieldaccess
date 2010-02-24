@@ -1,5 +1,5 @@
 name = Taxonomy field access 
-description = [grouphug] For grouping various items. 
+description = [taxonomyfieldaccess] Control field access based on node's terms. 
 core = 6.x
 dependencies[] = ficklefieldaccess
 dependencies[] = taxonomy

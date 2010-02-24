@@ -22,8 +22,7 @@ function taxonomyfieldaccess_check_taxonomy($op, $field, $account, $node) {
     
      if ($terms) {
       $access =  (db_result(db_query("SELECT 1 from {taxonomyfieldaccess_terms} where tid in(". db_placeholders($terms) .")",$terms))? false :true);
-      $reasons = array(
-        'terms' => $terms,
+      $reason = array(
         'reason_callback' => 'taxonomyfieldaccess_format_reason',
       ); 
       return $access;
@@ -33,6 +32,14 @@ function taxonomyfieldaccess_check_taxonomy($op, $field, $account, $node) {
     if ($terms && $vocabs) return (db_result(db_query("SELECT 1 from {term_data} d where d.tid in(". db_placeholders($terms) .") and d.vid in (". db_placeholders($vocabs) .")",array_merge($terms,$vocabs)))? false : true );
     else true; // setting missing
   }
+}
+
+function taxonomyfieldaccess_format_reason() {
+  $result = db_query("SELECT * from {term_data} where tid in (SELECT tid from {taxonomyfieldaccess_terms})");
+  while($term = db_fetch_object($result)){
+    $terms[] = l($term->name,taxonomy_term_path($term));
+  }
+  if ($terms) return  format_plural(count($terms),"Content was tagged with ","Content was tagged with at least one of ") . implode(", ",$terms);
 }
 
 function taxonomyfieldaccess_menu(){

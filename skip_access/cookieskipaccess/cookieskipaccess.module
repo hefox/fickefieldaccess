@@ -1,0 +1,55 @@
+<?php
+
+
+
+function cookieskipaccess_menu(){
+  /*$items['admin/settings/fickle/cookie'] = array(
+    'title' => 'Cookie',
+    'description' => 'Administer cookie skip access settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('cookieskipaccess_admin'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'cookieskipaccess.admin.inc',
+    'type'=> MENU_LOCAL_TASK,
+  );*/
+  $items['cookieskipaccess'] = array(
+    'title' => 'Cookie',
+    'description' => 'Set cookie.',
+    'page callback' => 'fieldaccesscookie_set_cookie',
+    'access arguments' => array('access content'),
+    'type'=> MENU_CALLBACK,
+  );
+  return $items;
+}
+
+
+function fieldaccesscookie_set_cookie() {
+  if ($_GET['token'] == drupal_get_token()) {
+    setcookie("cookieskipaccess", 1, time() + variable_get('cookieskipaccess_expire',2592000), '/');
+  }
+  drupal_goto();
+}
+
+function cookieskipaccess_check($op, $field, $account, $node) {
+  if ($_COOKIE['cookieskipaccess']) return TRUE; 
+}
+
+function cookieskipaccess_fickle_skip_access() {
+  return array('cookieskipaccess_check'=>t('Skip access based on cookie.'));
+}
+function cookieskipaccess_fickle_sadresponses() {
+  return array('cookieskipaccess_respond'=>t('Display message to click link to set token.'));
+}
+
+function cookieskipaccess_respond() {
+  global $reason;
+  static $set ;
+  if (empty($set)) {
+    if ($reason['reason_callback'] && function_exists($reason['reason_callback']) ) $r = call_user_func($reason['reason_callback']);
+    if (!$r) $r = ('Unknown reason');
+    $url = url('cookieskipaccess', array('query' =>drupal_get_destination() .'&token=' . drupal_get_token()));
+
+    drupal_set_message(filter_xss(t('Control to some fields has been controlled due to: <br>!reason.</br>Please click here <a href="!url">here</a> to see them.',array('!url'=>$url,'!reason'=>$r))));
+    $set = 1;
+  }
+}

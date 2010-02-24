@@ -1,5 +1,7 @@
 <?php
 
+global $reason;
+$reason = array();
 function ficklefieldaccess_menu(){
   $items['admin/settings/fickle'] = array(
     'title' => 'Fickle field access',
@@ -85,7 +87,6 @@ function ficklefieldaccess_field_access($op, $field, $account, $node) {
       }
     }
   }
-  echo $access;
   return $access ;
 }
 

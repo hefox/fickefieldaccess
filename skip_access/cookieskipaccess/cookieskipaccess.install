@@ -1,0 +1,7 @@
+<?php
+
+function cookieskipaccess_uninstall() {
+  variable_del('cookieskipaccess_message');
+  variable_del('cookieskipaccess_expire');
+}
+
