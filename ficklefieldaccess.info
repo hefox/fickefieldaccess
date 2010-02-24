@@ -1,0 +1,5 @@
+name = Fickle field access 
+description = [ficklefieldaccess] Base functionality for variable field access. 
+core = 6.x
+dependencies[] = content
+package = Fickle

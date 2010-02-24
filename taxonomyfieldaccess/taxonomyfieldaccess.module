@@ -1,0 +1,78 @@
+<?php
+
+function taxonomyfieldaccess_ficklefieldaccess_info() {
+  return array(
+    'taxonomyfieldaccess' => array(
+      'title'=>t('Taxonomy'),
+      'functions'=>array(
+          'access' => 'taxonomyfieldaccess_check_taxonomy',
+          'skip_access'=> variable_get('taxonomyfieldaccess_skip_access',array()),
+          'sadresponses'=> variable_get('taxonomyfieldaccess_sadresponses',array()),
+      ),
+      'types' => variable_get('taxonomyfieldaccess_types',array()),
+      'ops' => variable_get('taxonomyfieldaccess_ops',array('view')),
+     )
+  );
+}
+function taxonomyfieldaccess_check_taxonomy($op, $field, $account, $node) {
+  global $reason; 
+  $terms =  array_keys(taxonomy_node_get_terms($node));
+  $vocabs = array_filter(variable_get('taxonomyfieldaccess_vocabs',array()));
+  if (variable_get('taxonomyfieldaccess_method','term')=='term') {
+    
+     if ($terms) {
+      $access =  (db_result(db_query("SELECT 1 from {taxonomyfieldaccess_terms} where tid in(". db_placeholders($terms) .")",$terms))? false :true);
+      $reasons = array(
+        'terms' => $terms,
+        'reason_callback' => 'taxonomyfieldaccess_format_reason',
+      ); 
+      return $access;
+     }
+     return true ; // no terms!
+  } else { //check by vocabulary
+    if ($terms && $vocabs) return (db_result(db_query("SELECT 1 from {term_data} d where d.tid in(". db_placeholders($terms) .") and d.vid in (". db_placeholders($vocabs) .")",array_merge($terms,$vocabs)))? false : true );
+    else true; // setting missing
+  }
+}
+
+function taxonomyfieldaccess_menu(){
+  $items['admin/settings/fickle/taxonomy'] = array(
+    'title' => 'Taxonomy',
+    'description' => 'Administer taxonomy fickle field access settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('taxonomyfieldaccess_admin'),
+    'access arguments' => array('administer site configuration'),
+    'file' => 'taxonomyfieldaccess.admin.inc',
+    'type'=> MENU_LOCAL_TASK,
+  );
+  return $items;
+}
+
+function taxonomyfieldaccess_form_taxonomy_form_term_alter(&$form,$form_state) {
+
+  $form['taxonomyfieldaccess'] = array(
+    '#type' => 'checkbox',
+    '#title'=>'Taxonomy field access controlled',
+    '#default_value' => ($form['#term']['tid'] ? db_result(db_query("SELECT 1 from {taxonomyfieldaccess_terms} where tid = %d",$form['#term']['tid'] )):''),
+  
+  );
+  if (!$form['delete']['#weight']) $form['delete']['#weight'] =10;
+  if (!$form['submit']['#weight']) $form['submit']['#weight'] =10;
+}
+
+function taxonomyfieldaccess_taxonomy($op, $type, $array = NULL) {
+  if ($type == 'term') {
+    if ($op == 'insert' || $op == 'update') {
+      
+      if ($array['taxonomyfieldaccess']) {
+        if (!db_result(db_query("SELECT 1 from {taxonomyfieldaccess_terms} where tid = %d",$array['tid']) )) {
+          db_query("INSERT into {taxonomyfieldaccess_terms} VALUES(%d)",$array['tid']);
+        }
+      } else {
+         db_query("DELETE from {taxonomyfieldaccess_terms} where tid = %d",$array['tid']);
+      }
+    } elseif ($op == 'delete') {
+       db_query("DELETE from {taxonomyfieldaccess_terms} where tid = %d",$array['tid']);
+    }
+  }
+}

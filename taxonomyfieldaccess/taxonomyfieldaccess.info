@@ -1,0 +1,6 @@
+name = Taxonomy field access 
+description = [grouphug] For grouping various items. 
+core = 6.x
+dependencies[] = ficklefieldaccess
+dependencies[] = taxonomy
+package = Fickle 

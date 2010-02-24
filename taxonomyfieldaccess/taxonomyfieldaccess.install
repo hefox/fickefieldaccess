@@ -1,0 +1,31 @@
+<?php
+
+function taxonomyfieldaccess_uninstall() {
+  variable_del('taxonomyfieldaccess_types');
+  variable_del('taxonomyfieldaccess_sadresponses');
+  variable_del('taxonomyfieldaccess_method');
+  variable_del('taxonomyfieldaccess_vocabs');
+  variable_del('taxonomyfieldaccess_ops');
+  drupal_uninstall_schema('taxonomyfieldaccess');
+}
+function taxonomyfieldaccess_install() {
+  drupal_install_schema('taxonomyfieldaccess');
+}
+
+
+function taxonomyfieldaccess_schema(){
+ $schema['taxonomyfieldaccess_terms'] = array(
+    'description' => 'Stores terms that indicate that access should be restricted.',
+    'fields' => array(
+      'tid' =>  array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'A term ID.',
+      ),
+    ),
+    'primary key' => array('tid'),
+  );
+  return $schema;
+}

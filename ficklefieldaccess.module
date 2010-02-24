@@ -1,0 +1,157 @@
+<?php
+
+function ficklefieldaccess_menu(){
+  $items['admin/settings/fickle'] = array(
+    'title' => 'Fickle field access',
+    'description' => 'Administer fickle field access settings',
+    'page callback' => 'fickle_overview',
+    'access arguments' => array('administer site configuration'),
+    'file' => 'ficklefieldaccess.admin.inc',
+  );
+  $items['admin/settings/fickle/list'] = array(
+    'title' => 'Fickle',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'weight' => -1,
+  );
+  return $items;
+}
+
+function ficklefieldaccess_gather_fickles($fickle = null) {
+  static $info;
+  if (!isset($info)) {
+    $info = module_invoke_all('ficklefieldaccess_info');
+    drupal_alter('ficklefieldaccess_info',$info);
+  }
+  if ($fickle) return $info[$fickle];
+  return $info;
+}
+
+/**
+ * Implementation of hook_field_settings_alter().
+ */
+function ficklefieldaccess_field_settings_alter(&$settings, $op, $field) {
+  switch ($op) {
+    case 'form':
+      $info = ficklefieldaccess_gather_fickles();
+      $options[0] = t('None');
+      foreach($info as $k=>$in) {
+        $options[$k] = $in['title'];
+      }
+      
+      $settings['ficklefieldaccess'] = array(
+        '#title' => t('Fickle field access'),
+        '#type' => 'radios',
+        '#default_value' => (isset($field['premiumfields'])? $field['field_permissions'] : 0),
+        '#description' => t('Controll access to the field'),
+        '#weight' => -1,
+        '#options'=> $options,
+      );
+      break;
+    case 'save':
+      $settings[] = 'ficklefieldaccess';
+      break;
+  }
+}
+
+
+
+function ficklefieldaccess_field_access($op, $field, $account, $node) {
+  // Ignore the request if permissions have not been enabled for this field.
+  if (empty($field['ficklefieldaccess'])) {
+    return;
+  }
+  $fickle = ficklefieldaccess_gather_fickles($field['ficklefieldaccess']);
+  if ($fickle['types'] && !in_array($node->type,$fickle['types'])) return ;
+  if ($fickle['ops'] && !in_array($op,$fickle['ops'])) return ;
+    
+  /*Skip access if any functions selected return true*/
+  $skip_access = $fickle['functions']['skip_access'];
+  
+  if ($skip_access){
+    foreach($skip_access as $sa) {
+      $skip = false;
+      if (function_exists($sa)) $skip = call_user_func($sa,$op, $field, $account, $node);
+      if ($skip) return;
+    }
+  }
+  $access_function = $fickle['functions']['access'];
+  
+  $access =  call_user_func($access_function, $op, $field, $account, $node);
+  if (empty($access)) {
+    $sad_responces = $fickle['functions']['sadresponses'];
+    if ($sad_responces){
+      foreach($sad_responces as $sr) {
+        if (function_exists($sr)) $sr = call_user_func($sr, $op, $field, $account, $node);
+      }
+    }
+  }
+  echo $access;
+  return $access ;
+}
+
+
+/*Helper admin settings*/
+
+function _form_fickle_types(&$form,$key) {
+  $form[$key]=  array(
+    '#type' => 'checkboxes',
+    '#title' => t('Content types'),
+    '#default_value' => variable_get($key,array()),
+    '#options' => array_map('check_plain', node_get_types('names')),
+    '#description' => t('Select content types to use with this access control; leave empty for all.'),
+  );
+}
+
+function _form_fickle_sadresponses(&$form,$key) {
+  $form[$key]=  array(
+    '#type' => 'checkboxes',
+    '#multiple'=> true,
+    '#title' => t('Action to take on access denied'),
+    '#default_value' => variable_get($key,array()),
+    '#options' => _fickle_get_sadresponses(),
+    '#description' => t('Select content types to use with this access control.'),
+  );
+}
+
+function _fickle_get_sadresponses($reset = false) {
+  static $actions = NULL;
+  if (!isset($actions) || $reset) {
+    $actions = module_invoke_all('fickle_sadresponses');
+    drupal_alter('fickle_sadresponses',$actions);
+  }
+  return $actions;
+}
+
+
+function _form_fickle_skip_access(&$form,$key) {
+  $form[$key]=  array(
+    '#type' => 'checkboxes',
+    '#multiple'=> true,
+    '#title' => t('Check to skip fickle check'),
+    '#default_value' => variable_get($key,array()),
+    '#options' => _fickle_get_skip_access(),
+    '#description' => t('Check which function to use to check if user is controlled by this.'),
+  );
+}
+
+function _fickle_get_skip_access($reset = false) {
+  static $actions = NULL;
+  if (!isset($actions) || $reset) {
+    $actions = module_invoke_all('fickle_skip_access');
+    drupal_alter('fickle_skip_access',$actions);
+  }
+  return $actions;
+}
+
+function _form_fickle_ops(&$form,$key) {
+  $form[$key]=  array(
+    '#type' => 'checkboxes',
+    '#multiple'=> true,
+    '#required'=> true,
+    '#title' => t('Operations'),
+    '#default_value' => variable_get($key,array('view')),
+    '#options' => array('view'=>'View','edit'=>'Edit'),
+    '#description' => t('Check which operations this check checks.'),
+  );
+}
+

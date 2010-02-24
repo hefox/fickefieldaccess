@@ -1,0 +1,13 @@
+<?php
+
+function fickleskipaccessperm_perm() {
+  return array('access fickle fields');
+}
+
+function fickleskipaccessperm_check($op, $field, $account, $node) {
+  return user_access('access fickle fields');
+}
+
+function fickleskipaccessperm_fickle_skip_access() {
+  return array('fickleskipaccessperm_check'=>t('Access fickle fields permission'));
+}
